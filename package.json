@@ -1,0 +1,22 @@
+{
+  "name": "zvpn-cli",
+  "version": "1.0.0",
+  "description": "Application to create CLI for ZVPN Integration",
+  "main": "app.js",
+  "dependencies": {},
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JonHurtt/zvpn-cli.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/JonHurtt/zvpn-cli/issues"
+  },
+  "homepage": "https://github.com/JonHurtt/zvpn-cli#readme"
+}
