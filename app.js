@@ -74,7 +74,7 @@ function getVPN(gateway, client_name, password, failover){
 
 	cli_vpn = "vpn client-ipsec-tunnel "+VPN+" vpn-mode layer-3 lan-to-lan-vpn";
 	cli_vpn += newline;	
-	cli_vpn += "vpn ipsec-tunnel "+VPN+" gateway "+gateway+" client-name "+client_name+"@bankofamerica.com password "+password+"";
+	cli_vpn += "vpn ipsec-tunnel "+VPN+" gateway "+gateway+" client-name "+client_name+"@domain.com password "+password+"";
 	cli_vpn += newline;
 	cli_vpn += "vpn ipsec-tunnel "+VPN+" ike phase1 auth-method psk";
 	cli_vpn += newline;
@@ -94,7 +94,7 @@ function getVPN(gateway, client_name, password, failover){
 	cli_vpn += newline;
 	cli_vpn += "vpn ipsec-tunnel "+VPN+" ike phase1 mode aggressive";
 	cli_vpn += newline;
-	cli_vpn += "vpn ipsec-tunnel "+VPN+" local-ike-id ufqdn "+client_name+"@bankofamerica.com";
+	cli_vpn += "vpn ipsec-tunnel "+VPN+" local-ike-id ufqdn "+client_name+"@domain.com";
 	cli_vpn += newline;
 	cli_vpn += "vpn ipsec-tunnel "+VPN+" l2l-access-list VPN-ACL";
 	cli_vpn += newline;
@@ -149,17 +149,13 @@ function write_to_file(output, filepath){
 	        return console.log(err);
 	    }
 	    console.log("Succesful Generation of "+filepath+"!");
-	});
+	);
 	
 	
 }//end write_to_file()
 function bulk_generate(locations){
 	console.log('Bulk Generation has begun...');
-	locations.forEach(function (location){
-		//generate_file(location)
-		generate_file(location).then(function(data){write_to_file(data.output, data.filepath);})
-		
-	})
+	locations.forEach(function (location){generate_file(location).then(function(data){write_to_file(data.output, data.filepath);})})
 	console.log(spacer);	
 }//end bulk_generate
 
@@ -184,8 +180,7 @@ function parse_csv(csv_file){
 	console.log('Add Location' + i + ' to locations');
 	add_location('location'+i, 'password'+i, 'gateway'+i, 'f_gateway'+i)
 }*/
-
-
-
 parse_csv('csv_output/test.csv');
+
+
 
