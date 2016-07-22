@@ -105,7 +105,9 @@ function getVPN(gateway, client_name, password, failover){
 
 function generate_file(gateway, client_name, password, f_gateway){
 	var output = "";
+	var directory = "cli_output/"
 	var filename = "s-cli-"+client_name + ".txt"
+	var filepath = directory + filename;
 	
 	console.log("Generating CLIs...");
 	output = spacer;	
@@ -115,14 +117,16 @@ function generate_file(gateway, client_name, password, f_gateway){
 	output += newline;
 	output += "#filename: "+filename;
 	output += newline;
+	output += "#filepath: "+filepath;
+	output += newline;
 	output += "#date: "+new Date().toString();		
 	output += spacer;
 	
 	output +=getCLI(gateway, client_name, password, f_gateway);
-	console.log("Generating "+filename+"...");
+	console.log("Generating "+filepath+"...");
 	
 	var fs = require('fs');
-	fs.writeFile(filename, output, function(err) {
+	fs.writeFile(filepath, output, function(err) {
 	    if(err) {
 	        return console.log(err);
 	    }
