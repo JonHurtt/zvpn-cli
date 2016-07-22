@@ -149,7 +149,7 @@ function write_to_file(output, filepath){
 	        return console.log(err);
 	    }
 	    console.log("Succesful Generation of "+filepath+"!");
-	);
+	});
 	
 	
 }//end write_to_file()
