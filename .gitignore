@@ -1,3 +1,4 @@
 node_modules/
 cli_output/
+csv_output/
 *.log
