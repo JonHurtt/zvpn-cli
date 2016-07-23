@@ -284,35 +284,6 @@ console.log(spacer);
 if(command === 'build'){
 	parse_csv(csv_filepath);
 }else{
-	var Menu = require('terminal-menu');
-	var menu = Menu({ width: 60, x: 4, y: 2 });
-	menu.reset();
-
-	menu.write('-----------------------------------------\n');
-	menu.write(pjson.name + ' version'+pjson.version+'\n');
-	menu.write('(c): '+ dateFormat(now, 'yyyy') + '\n');
-	menu.write(pjson.homepage+'\n');	
-	menu.write('-----------------------------------------\n');
-	menu.add('Add Single Location');
-	menu.add('Bulk Generation with CSV Import');
-	menu.add('Exit');
-	menu.write('-----------------------------------------\n');
-	
-	menu.on('select', function (label) {
-	    if(label == 'Exit'){menu.close();}
-	    else{
-		//other optiosn
-		    
-	    }
-	});
-	
-	process.stdin.pipe(menu.createStream()).pipe(process.stdout);
-	 
-	process.stdin.setRawMode(true);
-	menu.on('close', function () {
-	    process.stdin.setRawMode(false);
-	    process.stdin.end();
-	});
 }
 console.log(spacer);
 
