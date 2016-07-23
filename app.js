@@ -13,14 +13,6 @@ var cli_directory = 'output/';
 var csv_directory = 'output/';
 
 
-
-//var cli_directory = "cli_output/";
-//var csv_directory = "csv_output/";
-/*
-	var summary = {
-	no_of_files_generated = 0	
-}*/
-
 var argv = require('yargs')
 	.command('build', 'CSV File for import', function (yargs) {
 		return yargs.options({ //Returning Options as third paramter of .command(cmd, desc, [module])
@@ -292,8 +284,35 @@ console.log(spacer);
 if(command === 'build'){
 	parse_csv(csv_filepath);
 }else{
-	console.log("Run command with Buld command to import CSV file");
-	console.log("node app.js build <filepath>");
+	var Menu = require('terminal-menu');
+	var menu = Menu({ width: 60, x: 4, y: 2 });
+	menu.reset();
+
+	menu.write('-----------------------------------------\n');
+	menu.write(pjson.name + ' version'+pjson.version+'\n');
+	menu.write('(c): '+ dateFormat(now, 'yyyy') + '\n');
+	menu.write(pjson.homepage+'\n');	
+	menu.write('-----------------------------------------\n');
+	menu.add('Add Single Location');
+	menu.add('Bulk Generation with CSV Import');
+	menu.add('Exit');
+	menu.write('-----------------------------------------\n');
+	
+	menu.on('select', function (label) {
+	    if(label == 'Exit'){menu.close();}
+	    else{
+		//other optiosn
+		    
+	    }
+	});
+	
+	process.stdin.pipe(menu.createStream()).pipe(process.stdout);
+	 
+	process.stdin.setRawMode(true);
+	menu.on('close', function () {
+	    process.stdin.setRawMode(false);
+	    process.stdin.end();
+	});
 }
 console.log(spacer);
 
