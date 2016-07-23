@@ -1,16 +1,21 @@
 var dateFormat = require('dateformat');
 var now = new Date();
 var pjson = require('./package.json');
-var fs = require('fs');
-	
+//var fs = require('fs');
+var fs = require('file-system');
+var csv = require('csv');
+var constants = require('./constants.json')
+var client_domain = constants.client_domain;	
 var newline = "\n";
 var spacer = "\n#++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
 var locations = [];
-//var cli_directory = "output/"+dateFormat(now, "ddmmyyyy")+"/";
-//var csv_directory = "output/"+dateFormat(now, "ddmmyyyy")+"/";
+var cli_directory = 'output/';
+var csv_directory = 'output/';
 
-var cli_directory = "cli_output/";
-var csv_directory = "csv_output/";
+
+
+//var cli_directory = "cli_output/";
+//var csv_directory = "csv_output/";
 /*
 	var summary = {
 	no_of_files_generated = 0	
@@ -112,7 +117,7 @@ function getVPN(gateway, client_name, password, failover){
 	//console.log("starting getVPN("+gateway+", "+client_name+", "+password+", "+failover+")");
 	cli_vpn = "vpn client-ipsec-tunnel "+VPN+" vpn-mode layer-3 lan-to-lan-vpn";
 	cli_vpn += newline;	
-	cli_vpn += "vpn ipsec-tunnel "+VPN+" gateway "+gateway+" client-name "+client_name+"@domain.com password "+password+"";
+	cli_vpn += "vpn ipsec-tunnel "+VPN+" gateway "+gateway+" client-name "+client_name+"@"+client_domain+" password "+password+"";
 	cli_vpn += newline;
 	cli_vpn += "vpn ipsec-tunnel "+VPN+" ike phase1 auth-method psk";
 	cli_vpn += newline;
@@ -132,7 +137,7 @@ function getVPN(gateway, client_name, password, failover){
 	cli_vpn += newline;
 	cli_vpn += "vpn ipsec-tunnel "+VPN+" ike phase1 mode aggressive";
 	cli_vpn += newline;
-	cli_vpn += "vpn ipsec-tunnel "+VPN+" local-ike-id ufqdn "+client_name+"@domain.com";
+	cli_vpn += "vpn ipsec-tunnel "+VPN+" local-ike-id ufqdn "+client_name+"@"+client_domain;
 	cli_vpn += newline;
 	cli_vpn += "vpn ipsec-tunnel "+VPN+" l2l-access-list VPN-ACL";
 	cli_vpn += newline;
@@ -146,11 +151,9 @@ function getVPN(gateway, client_name, password, failover){
 }//end getVPN()
 
 function generate_file(location){
-	
-	return new Promise(function (resolve, reject){
-		
+	return new Promise(function (resolve, reject){		
 		var output = "";
-		var filename = dateFormat(now, "ddmmyyyy")+"-s-cli-"+location.client_name + ".txt"
+		var filename = dateFormat(now, "yyyymmdd")+"-scli-"+location.client_name + ".txt"
 		var filepath = cli_directory + filename;
 		
 		//console.log(spacer);
@@ -170,15 +173,13 @@ function generate_file(location){
 		output += spacer;
 		output +=getCLI(location);
 		resolve({output: output, filepath: filepath});	
-		
-		resolve(output);
-	}//end function
+		}//end function
 	);//end return
 }//end generate_file()
 
 function write_to_file(output, filepath){
-	//var fs = require('fs');
 	console.log("++Generating "+filepath+" ........");
+
 	
 	fs.writeFile(filepath, output, function(err) {
 	    if(err) {
@@ -193,12 +194,10 @@ function bulk_generate(locations){
 	locations.forEach(function (location){generate_file(location).then(function(data){write_to_file(data.output, data.filepath);})})
 }//end bulk_generate
 
-function parse_csv(csv_file){
-	var fs = require('fs');
-	var csv = require('csv');
-	
+function parse_csv(csv_file){	
 	var parser = csv.parse({delimiter: ',', comment: '#'}, function(err, data){
 		add_locations(data);
+		create_directories();
 		bulk_generate(locations);
 		generate_location_csv(locations);
 		generate_vpn_cred_csv(locations);
@@ -208,16 +207,26 @@ function parse_csv(csv_file){
 	fs.createReadStream(csv_file).pipe(parser);
 }//end parse_csv
 
+function create_directories(){
+	/*FIX THE CREATE DIRECTORIES*/		
+		cli_directory += dateFormat(now, "yyyy-mm-dd")+"/";
+		csv_directory = cli_directory+"csv/";
+		
+		fs.mkdir(cli_directory, function(err) {});
+		fs.mkdir(csv_directory, function(err) {});
+	
+}
+
 function generate_location_csv(locations){
 	console.log('+Location CSV generation has begun...');
 	//function to generate locations csv
 	var output = '';
-	var location_csv_filename = dateFormat(now, "ddmmyyyy")+"-vpn-location.csv";
+	var location_csv_filename = dateFormat(now, "yyyymmdd")+"-vpn-location.csv";
 	var location_csv_filepath = csv_directory + location_csv_filename;
 	
 	//+,VPN,{Location},FQDN,{client_name}@domain.com
 	locations.forEach(function (location){
-		output += "+,VPN,"+location.client_name+",FQDN,"+location.client_name+"@domain.com\n";
+		output += "+,VPN,"+location.client_name+",FQDN,"+location.client_name+"@"+client_domain+"\n";
 	})
 	
 	console.log("++Generating "+location_csv_filepath+" ........");
@@ -231,8 +240,6 @@ function generate_location_csv(locations){
 
 }
 
-
-
 function generate_vpn_cred_csv(locations){
 	console.log('+Location VPN Credentials generation has begun...');
 	/*
@@ -243,12 +250,12 @@ function generate_vpn_cred_csv(locations){
 	//console.log(locations);
 	//function to generate locations csv
 	var output = 'Action,PSK Type,VPN User Name,Comments,Pre-Shared Key,THIS IS A HEADER LINE WHICH WILL NOT BE IMPORTED - YOUR DATA MUST START FROM LINE 2\n';
-	var vpn_csv_filename = dateFormat(now, "ddmmyyyy")+"-vpn-credentials.csv";
+	var vpn_csv_filename = dateFormat(now, "yyyymmdd")+"-vpn-credentials.csv";
 	var location_csv_filepath = csv_directory + vpn_csv_filename;
 	
 	//+,VPN,{Location},FQDN,{client_name}@domain.com
 	locations.forEach(function (location){
-		output += "+,UFQDN,"+location.client_name+"@domain.com,Location:"+location.client_name+"["+location.password+"],"+location.password+",\n";
+		output += "+,UFQDN,"+location.client_name+"@"+client_domain+",Location:"+location.client_name+"["+location.password+"],"+location.password+",\n";
 	})
 	
 	console.log("++Generating "+location_csv_filepath+" ........");

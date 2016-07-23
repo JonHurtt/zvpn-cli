@@ -1,5 +1,7 @@
 node_modules/
+output/
 csv_input/
 cli_output/
 csv_output/
 *.log
+constants.json
