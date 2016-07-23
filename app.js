@@ -44,10 +44,11 @@ function isEmpty(str) {
 
 function add_location(location){
 	var location = {
-		client_name: location[0],
-		password: location[1],
-		gateway: location[2],
-		f_gateway: location[3]
+		name: location[0],
+		client_name: location[1],
+		password: location[2],
+		gateway: location[3],
+		f_gateway: location[4]
 	};//defining an empty object
 		
 	locations.push(location);		
@@ -69,7 +70,7 @@ function getCLI(location){
 	//console.log("Variables {client_name: " + location.client_name + ", password: " + location.password + ", gateway: " + location.gateway + ", f_gateway: "+location.f_gateway+"}");
 	
 	cli = spacer;	
-	cli += "#Start of Configuration for "+ location.client_name ;
+	cli += "#Start of Configuration for "+ location.name ;
 	cli += spacer;
 	
 	cli += "user-profile Public-VPN-User security deny ipv6";
@@ -91,7 +92,7 @@ function getCLI(location){
 		//console.log('Location is NOT configured with Failover Gateway');
 	}
 	cli += spacer;
-	cli += "#End of Configuration for "+ location.client_name ;
+	cli += "#End of Configuration for "+ location.name ;
 	cli += spacer;
 	
 	return cli;
@@ -186,7 +187,8 @@ function bulk_generate(locations){
 	locations.forEach(function (location){generate_file(location).then(function(data){write_to_file(data.output, data.filepath);})})
 }//end bulk_generate
 
-function parse_csv(csv_file){	
+function parse_csv(csv_file){
+	/*CSV Format: name,client_name,gateway,fgateway*/	
 	var parser = csv.parse({delimiter: ',', comment: '#'}, function(err, data){
 		add_locations(data);
 		create_directories();
@@ -218,7 +220,7 @@ function generate_location_csv(locations){
 	
 	//+,VPN,{Location},FQDN,{client_name}@domain.com
 	locations.forEach(function (location){
-		output += "+,VPN,"+location.client_name+",FQDN,"+location.client_name+"@"+client_domain+"\n";
+		output += "+,VPN,"+location.name+",FQDN,"+location.client_name+"@"+client_domain+"\n";
 	})
 	
 	console.log("++Generating "+location_csv_filepath+" ........");
@@ -247,7 +249,7 @@ function generate_vpn_cred_csv(locations){
 	
 	//+,VPN,{Location},FQDN,{client_name}@domain.com
 	locations.forEach(function (location){
-		output += "+,UFQDN,"+location.client_name+"@"+client_domain+",Location:"+location.client_name+"["+location.password+"],"+location.password+",\n";
+		output += "+,UFQDN,"+location.name+"@"+client_domain+",Location:"+location.client_name+"["+location.password+"],"+location.password+",\n";
 	})
 	
 	console.log("++Generating "+location_csv_filepath+" ........");
