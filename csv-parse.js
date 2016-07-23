@@ -6,4 +6,6 @@ csv.parse(input, {delimiter: ',', comment: '#'}, function(err, output){
   console.log(output);
 });
 
+csv.from(input).to('/data.csv');
+
 
