@@ -4,7 +4,8 @@ var pjson = require('./package.json');
 //var fs = require('fs');
 var fs = require('file-system');
 var csv = require('csv');
-var constants = require('./constants.json')
+var constants = require('./constants.json');
+var zen_regions = require('./zen_regions.json');
 var client_domain = constants.client_domain;	
 var newline = "\n";
 var spacer = "\n#++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
@@ -18,7 +19,7 @@ var argv = require('yargs')
 		return yargs.options({ //Returning Options as third paramter of .command(cmd, desc, [module])
 			path: {
 				demand: true,
-				alias: 'path',
+				alias: 'p',
 				description: 'path for CSV',
 				type: 'string'
 			}
@@ -42,28 +43,66 @@ function isEmpty(str) {
 }
 
 
-function add_location(location){
+function add_location(data){
 	var location = {
-		name: location[0],
-		client_name: location[1],
-		password: location[2],
-		gateway: location[3],
-		f_gateway: location[4]
+		name: data[0],
+		client_name: data[1],
+		password: data[2],
+		zen_code: data[3],
+		gateway: '',
+		f_gateway: ''
 	};//defining an empty object
+	
+	//console.log(data);
+	//console.log(location);
+	//Define ZEN Node
+	gateways = determine_zen(location.zen_code);
+	
+	location.gateway = gateways.primary;
+	location.f_gateway = gateways.failover;	
+	
 		
 	locations.push(location);		
 	//console.log(locations);
-	}//end add_location
+}//end add_location
+	
+	
 function add_locations(locations){
 		locations.forEach(function (location){
-		add_location(location)
+
 		console.log('Adding Location ' + location[0] + ' ');
+		add_location(location)
 	})
-	//console.log(spacer);	
-	//console.log('Locations Added');
-	//console.log(locations);	
-	//console.log(spacer);		
+	
+	/*
+		console.log(spacer);	
+		console.log('Locations Added');
+		console.log(locations);	
+		console.log(spacer);		
+	*/
 }//end add_locations
+
+
+
+
+function determine_zen(zen_code){
+	var gateways = {"primary": "", "failover":""};
+
+	console.log("Zen Code:"+zen_code);
+	console.log(zen_regions[zen_code].zen_ip);
+	
+
+	failover_zen = zen_regions[zen_code].failover;
+	console.log("Failover Zen Code:"+failover_zen);
+	console.log(zen_regions[failover_zen].zen_ip);
+	
+	gateways.primary = zen_regions[zen_code].zen_ip
+	gateways.failover = zen_regions[failover_zen].zen_ip;
+	
+	return gateways;
+}
+
+
 function getCLI(location){
 	var cli;
 	//console.log("starting getCLI");
@@ -72,16 +111,12 @@ function getCLI(location){
 	cli = spacer;	
 	cli += "#Start of Configuration for "+ location.name ;
 	cli += spacer;
-	
 	cli += "user-profile Public-VPN-User security deny ipv6";
 	cli += newline;
-
 	cli += "vpn l2l-access-list VPN-ACL src-ip 192.168.47.0/24 dst-ip 0.0.0.0/0";
 	cli += newline;
-	
 	cli += "vpn l2l-access-list VPN-ACL src-ip 10.0.0.0/16 dst-ip 0.0.0.0/0";
 	cli += newline;	
-	
 	cli += getVPN(location.gateway, location.client_name, location.password, false);
 	cli += newline;	
 	
@@ -162,7 +197,9 @@ function generate_file(location){
 		output += newline;
 		output += "#created: "+ dateFormat(now, "dddd, mmmm dS, yyyy, h:MM:ss TT");
 		output += newline;
-		output += "#debug: "+location.client_name+"|"+location.password+"|"+location.gateway+"|"+location.f_gateway;		
+		output += "#debug: "+location.name+"|"+location.client_name+"|"+location.password;
+		output += newline;
+		output += "#debug: "+location.zen_code+"|"+location.gateway+"|"+location.f_gateway;		
 		output += spacer;
 		output +=getCLI(location);
 		resolve({output: output, filepath: filepath});	
@@ -190,6 +227,8 @@ function bulk_generate(locations){
 function parse_csv(csv_file){
 	/*CSV Format: name,client_name,gateway,fgateway*/	
 	var parser = csv.parse({delimiter: ',', comment: '#'}, function(err, data){
+		console.log("Parsed Data");
+		console.log(data);
 		add_locations(data);
 		create_directories();
 		bulk_generate(locations);
@@ -286,6 +325,9 @@ console.log(spacer);
 if(command === 'build'){
 	parse_csv(csv_filepath);
 }else{
+	//console.log(zen_regions);
+	//determine_zen('ATL');
+
 }
 console.log(spacer);
 
