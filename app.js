@@ -1,3 +1,4 @@
+require('should');
 var dateFormat = require('dateformat');
 var now = new Date();
 var pjson = require('./package.json');
@@ -317,7 +318,7 @@ function bulk_generate_file(locations){
 function process_csv(csv_file){
 	return new Promise(function(resolve,reject){
 		/*CSV Format: location,client_name,password,zen_code*/	
-		var parser = csv.parse({delimiter: ',', comment: '#'}, function(err, csv_data){
+		var parser = csv.parse({delimiter: ',', comment: '#', trim: 'true'}, function(err, csv_data){
 		/*	
 			log_debug('===csv input===');
 			log_debug(csv_data.toString())
@@ -354,37 +355,33 @@ function process_csv(csv_file){
 					})//end then generate_debug
 				});//end then create_directories
 			})//end then add_locations	
-			
 			*/
-			
-			
-			
 			
 			log_debug('===csv input===');
 			log_debug(csv_data.toString())
 			log_debug('===add_locations(data)===');
-			add_locations(csv_data).then(function(){
+			add_locations(csv_data)
+			.then(function(){
 				log_debug(debug_spacer);												
-				log_debug('===create_directories()===');
+				log_debug('===then.create_directories()===');
 				log_debug(debug_spacer);												
 				create_directories()
 				.then(function(){	
 					log_debug(debug_spacer);								
-					log_debug('===bulk_generate_file(locations)===');
+					log_debug('===then.bulk_generate_file(locations)===');
 					log_debug(debug_spacer);								
 					bulk_generate_file(locations)
 					.then(function(){
 							log_debug(debug_spacer);
-							log_debug('===generate_location_csv(locations)===');
+							log_debug('===then.generate_location_csv(locations)===');
 							log_debug(debug_spacer);
 							generate_location_csv(locations)
 							.then(function(){
 									log_debug(debug_spacer);							
-									log_debug('===generate_vpn_cred_csv(locations)===');
+									log_debug('===then.generate_vpn_cred_csv(locations)===');
 									log_debug(debug_spacer);							
 									generate_vpn_cred_csv(locations);
 							});//end then generated
-							resolve();//resolve to finish locations csv
 					}).then(function(){			
 					generate_debug();
 					})//end then generate_debug
@@ -393,12 +390,18 @@ function process_csv(csv_file){
 
 		});//end parser object
 		
-		log_debug('===createReadStream(csv_file)===');
-		fs.createReadStream(csv_file).pipe(parser).then(function(){resolve()});
+		log_debug('===begining of createReadStream(csv_file)===');
+		fs.createReadStream(csv_file).pipe(parser).then(function(){
+			console.log('Resolving');
+			log_debug('===end of createReadStream(csv_file)===');
+			resolve();
+		})
 		
-		resolve();
-	});
+		
+		///resolve();
+	});//end Promise
 }//end process_csv
+
 
 
 /*******************************************************/
@@ -457,7 +460,7 @@ function generate_vpn_cred_csv(locations){
 /*******************************************************/
 function log_debug(input){
 	//console.log(input);
-	debug += "[" + dateFormat(now, "ddmmyyyy:HH:MM:ss") + "]:" + input + "\n";
+	debug += "[" + dateFormat(now, "yyyymmdd:HH:MM:ss") + "]:" + input + "\n";
 }
 
 
@@ -473,6 +476,7 @@ function generate_debug(){
 	//console.log("++++++++++++++++++++END OF DEBUG OUTPUT++++++++++++++++++++");
 
 	log_debug("++Generating "+debug_filepath+" ........");
+	log_debug("Final Output will be displayed in the console");
 	write_to_file(debug,debug_filepath);
 }//end generate_debug
 
@@ -487,12 +491,13 @@ console.log(pjson.homepage);
 console.log(spacer);
 
 if(command === 'bulk'){
-	
 	process_csv(csv_filepath)
 	.then(function() {
 		console.log(spacer);
 		console.log("Application complete, please visit " + cli_directory + " for the files...");
 		console.log(spacer);
+		generate_debug();
+
 	});
 }else{
 
