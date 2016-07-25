@@ -8,7 +8,7 @@ var zen_regions = require('./zen_regions.json');
 var client_domain = constants.client_domain;	
 
 var newline = "\n";
-var spacer = "#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++";
+var spacer = "\n#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
 
 var locations = [];
 var output_directory = 'output/';
@@ -73,6 +73,20 @@ function create_directories(){
 		resolve();
 		});
 }//end create_directories
+
+/*******************************************************/
+//Write a String to File
+/*******************************************************/
+function write_to_file(output, filepath){
+	log_debug("++Generating "+filepath+" ........");
+	fs.writeFile(filepath, output, function(err) {
+	    if(err) {
+	        return console.log(err);
+	    }
+	    log_debug("+++Succesful Generation of "+filepath+"!");
+	});	
+}//end write_to_file()
+
 
 
 /*******************************************************/
@@ -263,27 +277,15 @@ function generate_file(location){
 	);//end return
 }//end generate_file()
 
-/*******************************************************/
-//Write a String to File
-/*******************************************************/
-function write_to_file(output, filepath){
-	log_debug("++Generating "+filepath+" ........");
-	fs.writeFile(filepath, output, function(err) {
-	    if(err) {
-	        return console.log(err);
-	    }
-	    log_debug("+++Succesful Generation of "+filepath+"!");
-	});	
-}//end write_to_file()
 
 /*******************************************************/
 //Bulk Generate
 /*******************************************************/
 function bulk_generate_file(locations){
 	return new Promise(function (resolve, reject){		
-	log_debug('+Bulk Generation has begun...');
-	locations.forEach(function (location){generate_file(location).then(function(data){write_to_file(data.output, data.filepath);})})
-	resolve();
+		log_debug('+Bulk Generation has begun...');
+		locations.forEach(function (location){generate_file(location).then(function(data){write_to_file(data.output, data.filepath);})})
+		resolve();
 	});
 }//end bulk_generate_file
 
@@ -389,7 +391,7 @@ function log_debug(input){
 //Generate Summary 
 /*******************************************************/
 function generate_debug(){
-	var debug_filename = dateFormat(now, "yyyymmdd")+"-debug.txt";
+	var debug_filename = "_"+dateFormat(now, "yyyymmdd")+"-debug.txt";
 	var debug_filepath = debug_directory + debug_filename;
 
 	//console.log("++++++++++++++++++++START OF DEBUG OUTPUT++++++++++++++++++++");
