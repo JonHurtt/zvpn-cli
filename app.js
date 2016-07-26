@@ -112,7 +112,6 @@ function add_location(data){
 	};//defining an empty object
 	
 	log_debug("===add_location(data)===");
-	log_debug('data.toString()');
 	log_debug(data.toString());
 	
 	//Define ZEN Node
@@ -214,7 +213,8 @@ function get_vpn_commands(gateway, client_name, password, failover){
 	if(failover === true ){VPN = "VPN-2"}else{var VPN = "VPN-1"}
 	
 	log_debug("starting get_vpn_commands("+gateway+", "+client_name+", "+password+", "+failover+")");
-	cli_vpn = "vpn client-ipsec-tunnel "+VPN+" vpn-mode layer-3 lan-to-lan-vpn";
+	cli_vpn = newline;	
+	cli_vpn += "vpn client-ipsec-tunnel "+VPN+" vpn-mode layer-3 lan-to-lan-vpn";
 	cli_vpn += newline;	
 	cli_vpn += "vpn ipsec-tunnel "+VPN+" gateway "+gateway+" client-name "+client_name+"@"+client_domain+" password "+password+"";
 	cli_vpn += newline;
@@ -285,13 +285,14 @@ function generate_file(location){
 
 
 /*******************************************************/
-//Bulk Generate
+//Bulk Generate - If you can refactor this to resolve after writing rather than after loop
 /*******************************************************/
 function bulk_generate_file(locations){
 	return new Promise(function(resolve,reject){
 		log_debug(debug_spacer);
 		log_debug('+Bulk Generation has begun...');
 		log_debug(debug_spacer);
+		
 		
 		locations.forEach(function (location){
 			generate_file(location)
@@ -302,6 +303,7 @@ function bulk_generate_file(locations){
 						});//end thenfunction
 				})//end thenfucntion
 		})//end forEach function
+		
 		
 		log_debug(debug_spacer);	
 		log_debug('+Bulk Generation has concluded...');
@@ -391,14 +393,16 @@ function process_csv(csv_file){
 		});//end parser object
 		
 		log_debug('===begining of createReadStream(csv_file)===');
-		fs.createReadStream(csv_file).pipe(parser).then(function(){
+		fs.createReadStream(csv_file).pipe(parser)
+		
+		/*.then(function(){
 			console.log('Resolving');
 			log_debug('===end of createReadStream(csv_file)===');
 			resolve();
-		})
+		})*/
 		
 		
-		///resolve();
+		resolve();
 	});//end Promise
 }//end process_csv
 
@@ -492,13 +496,14 @@ console.log(spacer);
 
 if(command === 'bulk'){
 	process_csv(csv_filepath)
-	.then(function() {
+	/*.then(function() {
 		console.log(spacer);
 		console.log("Application complete, please visit " + cli_directory + " for the files...");
 		console.log(spacer);
 		generate_debug();
 
-	});
+	});*/
+	
 }else{
 
 /*
