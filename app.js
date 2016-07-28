@@ -1,4 +1,7 @@
 require('should');
+
+var yargs = require('yargs');
+
 var dateFormat = require('dateformat');
 var now = new Date();
 var pjson = require('./package.json');
@@ -6,7 +9,8 @@ var fs = require('file-system');
 var csv = require('csv');
 var constants = require('./constants.json');
 var zen_regions = require('./zen_regions.json');
-var client_domain = constants.client_domain;	
+var client_domain = constants.client_domain;
+	
 
 var newline = "\n";
 var debug_spacer = "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++";
@@ -22,27 +26,29 @@ var debug = '';
 /*******************************************************/
 //YARGS
 /*******************************************************/
-var argv = require('yargs')
-	.command('bulk', 'CSV File for import', function (yargs) {
-		return yargs.options({ //Returning Options as third paramter of .command(cmd, desc, [module])
+var argv=yargs.command('bulk', 'Bulk Import of CSV File {loc,client_name,pass,zen}', function (yargs) {
+		return yargs.options({ 
 			path: {
 				demand: true,
 				alias: 'p',
 				description: 'path for CSV {loc,client_name,pass,zen}',
 				type: 'string'
+			},
+			failover: {
+				demand: true,
+				alias: 'f',
+				description: 'use to enable failover configuration',
+				type: 'boolean'
 			}
-		}//end of options function
-		)//end of options
+	})//end yarg.options
 		.help('help')
 	})//end command
 	.help('help')//argument set --help 
 	.argv;//example of chaning functions
 	
-//Example of above code simplified to single line
-//var argv = require('yargs').command('hello', 'Greets the user', function (yargs) {...}).help('help').argv;//example of chaning functions
-		
 var command = argv._[0]; //underscore named argument
-var csv_filepath = argv.path; // --firstName named argument
+var csv_filepath = argv.path;
+var gateawy_failover = argv.failover; 
 
 
 /*******************************************************/
@@ -56,13 +62,20 @@ function isEmpty(str) {
 //Create Directories needed to write files.
 /*******************************************************/
 
-function create_directories(){
+function create_directories(input_filepath){
 	return new Promise(function (resolve, reject){		
 		log_debug(debug_spacer);
 		log_debug('start create_directories');
 		
-	
-		cli_directory += dateFormat(now, "yyyy-mm-dd")+"/";
+		log_debug("Input Filepath: " + input_filepath);
+		var input_file = input_filepath.replace(/\..+$/, '');
+		log_debug('File Ext Removed: ' + input_file);
+		var input_filename = input_file.split('/');
+		log_debug('Splitting: ' + input_filename);
+		log_debug('Filename: ' + input_filename[input_filename.length -1 ]);
+		
+		
+		cli_directory += dateFormat(now, "yyyy-mm-dd")+"/"+input_filename[input_filename.length -1 ]+"/";
 		csv_directory = cli_directory+"csv/";
 		debug_directory = cli_directory;
 		
@@ -186,12 +199,12 @@ function get_commands(location){
 	cli += get_vpn_commands(location.gateway, location.client_name, location.password, false);
 	cli += newline;	
 	
-	if(!isEmpty(location.f_gateway)){
+	
+	if(!isEmpty(location.f_gateway) && gateawy_failover){
 		log_debug('Location is configured with Failover Gateway');
 		cli += get_vpn_commands(location.f_gateway, location.client_name, location.password, true);	
-	}else{		
-		//console.log('Location is NOT configured with Failover Gateway');
 	}
+	
 	cli += spacer;
 	cli += "#End of Configuration for "+ location.name ;
 	cli += spacer;
@@ -315,50 +328,13 @@ function bulk_generate_file(locations){
 
 
 /*******************************************************/
-//Parse and Process the CSV File and generate csv and cli files
+//Stream: Parse and Process the CSV File and generate csv and cli files
 /*******************************************************/
-function process_csv(csv_file){
-	return new Promise(function(resolve,reject){
+function process_stream_csv(csv_file){
+	console.log("Processing... " + csv_file + "");
+	console.log(spacer);
 		/*CSV Format: location,client_name,password,zen_code*/	
 		var parser = csv.parse({delimiter: ',', comment: '#', trim: 'true'}, function(err, csv_data){
-		/*	
-			log_debug('===csv input===');
-			log_debug(csv_data.toString())
-			log_debug('===add_locations(data)===');
-			add_locations(csv_data).then(function(){
-				log_debug(debug_spacer);												
-				log_debug('===create_directories()===');
-				log_debug(debug_spacer);												
-				create_directories()
-				.then(function(){	
-					log_debug(debug_spacer);								
-					log_debug('===bulk_generate_file(locations)===');
-					log_debug(debug_spacer);								
-					bulk_generate_file(locations)
-					.then(function(){
-						return new Promise(function(resolve, reject){
-							log_debug(debug_spacer);
-							log_debug('===generate_location_csv(locations)===');
-							log_debug(debug_spacer);
-							generate_location_csv(locations)
-							.then(function(){
-								return new Promise(function(resolve,reject){
-									log_debug(debug_spacer);							
-									log_debug('===generate_vpn_cred_csv(locations)===');
-									log_debug(debug_spacer);							
-									generate_vpn_cred_csv(locations);
-									resolve();//resolve to finish vpn csv
-								})//end function								
-							});//end then generated
-							resolve();//resolve to finish locations csv
-						})//end Promise
-					}).then(function(){			
-					generate_debug();
-					})//end then generate_debug
-				});//end then create_directories
-			})//end then add_locations	
-			*/
-			
 			log_debug('===csv input===');
 			log_debug(csv_data.toString())
 			log_debug('===add_locations(data)===');
@@ -367,7 +343,7 @@ function process_csv(csv_file){
 				log_debug(debug_spacer);												
 				log_debug('===then.create_directories()===');
 				log_debug(debug_spacer);												
-				create_directories()
+				create_directories(csv_filepath)
 				.then(function(){	
 					log_debug(debug_spacer);								
 					log_debug('===then.bulk_generate_file(locations)===');
@@ -392,20 +368,18 @@ function process_csv(csv_file){
 
 		});//end parser object
 		
+		
 		log_debug('===begining of createReadStream(csv_file)===');
-		fs.createReadStream(csv_file).pipe(parser)
+		var rs = fs.createReadStream(csv_file);
 		
-		/*.then(function(){
-			console.log('Resolving');
-			log_debug('===end of createReadStream(csv_file)===');
-			resolve();
-		})*/
-		
-		
-		resolve();
-	});//end Promise
-}//end process_csv
+		rs.on('error', function(error){
+			console.log('Error:', error.message)
+			console.log(spacer);
+		});
 
+		rs.pipe(parser)
+
+}//end process_stream_csv
 
 
 /*******************************************************/
@@ -494,8 +468,35 @@ console.log(pjson.name + "- v"+pjson.version);
 console.log(pjson.homepage);
 console.log(spacer);
 
+log_debug(debug_spacer);
+log_debug(pjson.name + "- v"+pjson.version);
+log_debug(debug_spacer);
+log_debug(pjson.homepage);
+log_debug(debug_spacer);
+
 if(command === 'bulk'){
-	process_csv(csv_filepath)
+	console.log("Starting Bulk process...");
+	console.log(spacer);
+	
+	if(isEmpty(csv_filepath)){
+	
+		console.log("Error: Please Provide a filename");
+		console.log(spacer);
+		
+	}else{
+		if(gateawy_failover){
+			console.log("Gateway Failover is Activated.");
+			console.log(spacer);
+				
+		}else{
+			console.log("Gateway Failover is Deactivated.");
+			console.log(spacer);	
+		};
+	
+		process_stream_csv(csv_filepath);
+		
+	}
+		
 	/*.then(function() {
 		console.log(spacer);
 		console.log("Application complete, please visit " + cli_directory + " for the files...");
@@ -505,6 +506,16 @@ if(command === 'bulk'){
 	});*/
 	
 }else{
+	console.log("Menu System coming soon...");
+	console.log(spacer);
+	console.log("Please use following format.\n");
+	console.log("For Single VPN: node app.js bulk -p csv_input/input_test.csv");
+	console.log("For Redundant VPN : node app.js bulk -f -p csv_input/intput_test.csv");
+	console.log(spacer);
+	yargs.showHelp();
+	console.log(spacer);
+	console.log('end');
+	console.log(spacer);
 
 /*
 1 - Select Single or Bulk
@@ -515,9 +526,3 @@ if(command === 'bulk'){
 */
 
 }
-
-
-
-
-
-
