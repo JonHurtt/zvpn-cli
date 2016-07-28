@@ -334,7 +334,7 @@ function process_stream_csv(csv_file){
 		/*CSV Format: location,client_name,password,zen_code*/	
 		var parser = csv.parse({delimiter: ',', comment: '#', trim: 'true'}, function(err, csv_data){
 			log_debug('===csv input===');
-			log_debug(csv_data.toString())
+			log_debug(JSON.stringify(csv_data))
 			log_debug('===add_locations(data)===');
 			add_locations(csv_data)
 			.then(function(){
@@ -471,6 +471,8 @@ log_debug(pjson.name + "- v"+pjson.version);
 log_debug(debug_spacer);
 log_debug(pjson.homepage);
 log_debug(debug_spacer);
+log_debug(JSON.stringify(argv));
+log_debug(debug_spacer);
 
 if(command === 'bulk'){
 	console.log("Starting Bulk process...");
@@ -478,7 +480,7 @@ if(command === 'bulk'){
 	
 	if(isEmpty(csv_filepath)){
 	
-		console.log("Error: Please Provide a filename");
+		console.log("Error: Please Provide a filename...");
 		console.log(spacer);
 		
 	}else{
@@ -507,8 +509,8 @@ if(command === 'bulk'){
 	console.log("Menu System coming soon...");
 	console.log(spacer);
 	console.log("Please use following format.\n");
-	console.log("For Single VPN: node app.js bulk -p csv_input/input_test.csv");
-	console.log("For Redundant VPN : node app.js bulk -f -p csv_input/intput_test.csv");
+	console.log("For Single VPN: \n node app.js bulk -path csv_input/input_test.csv");
+	console.log("For Redundant VPN : \n node app.js bulk -failover -path csv_input/intput_test.csv");
 	console.log(spacer);
 	yargs.showHelp();
 	console.log(spacer);
