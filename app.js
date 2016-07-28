@@ -1,5 +1,4 @@
 require('should');
-
 var yargs = require('yargs');
 
 var dateFormat = require('dateformat');
@@ -198,7 +197,6 @@ function get_commands(location){
 	cli += newline;	
 	cli += get_vpn_commands(location.gateway, location.client_name, location.password, false);
 	cli += newline;	
-	
 	
 	if(!isEmpty(location.f_gateway) && gateawy_failover){
 		log_debug('Location is configured with Failover Gateway');
