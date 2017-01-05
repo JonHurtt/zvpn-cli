@@ -25,12 +25,12 @@ var debug = '';
 /*******************************************************/
 //YARGS
 /*******************************************************/
-var argv=yargs.command('bulk', 'Bulk Import of CSV File {loc,client_name,pass,zen}', function (yargs) {
+var argv=yargs.command('bulk', 'Bulk Import of CSV File {loc,phase,hostname,client_name,pass,zen}', function (yargs) {
 		return yargs.options({ 
 			path: {
 				demand: true,
 				alias: 'p',
-				description: 'path for CSV {loc,client_name,pass,zen}',
+				description: 'path for CSV {loc,phase,hostname,client_name,pass,zen}',
 				type: 'string'
 			},
 			failover: {
@@ -48,7 +48,6 @@ var argv=yargs.command('bulk', 'Bulk Import of CSV File {loc,client_name,pass,ze
 var command = argv._[0]; //underscore named argument
 var csv_filepath = argv.path;
 var gateawy_failover = argv.failover; 
-
 
 /*******************************************************/
 //Utilty functinons
@@ -114,13 +113,28 @@ function write_to_file(output, filepath){
 /*******************************************************/
 function add_location(data){
 	
+	/*
+		CSV #
+		0:location
+		1:phase
+		2:hostname
+		3:client_name
+		4:password
+		5:zen_region
+		6:state
+	*/
+	
 	var location = {
 		name: data[0],
-		client_name: data[1],
-		password: data[2],
-		zen_code: data[3],
+		phase: data[1],
+		hostname: data[2],
+		client_name: data[3],
+		password: data[4],
+		zen_code: data[5],
 		gateway: '',
-		f_gateway: ''
+		f_gateway: '',
+		state: data[6],
+		timeZone: 'America/Los Angeles'
 	};//defining an empty object
 	
 	log_debug("===add_location(data)===");
@@ -186,9 +200,16 @@ function get_commands(location){
 	log_debug("{c_n" + location.client_name + ", p: " + location.password + ", g: " + location.gateway + ", f_g: "+location.f_gateway+"}");
 	
 	var cli;
-		cli = spacer;	
+	
+	cli = spacer;	
 	cli += "#Start of Configuration for "+ location.name ;
+	cli += newline;
+	cli += "#S-CLI Filename: VPN-ZEN-"+ location.client_name + "-v2" ;
+	cli += newline;
+	cli += "#S-CLI-Desc: "+ location.phase + ": " + location.hostname ;
 	cli += spacer;
+	cli += "usbmodem auto-reboot enable wait-time 1";	
+	cli += newline; 
 	cli += "user-profile Public-VPN-User security deny ipv6";
 	cli += newline;
 	cli += "vpn l2l-access-list VPN-ACL src-ip 192.168.47.0/24 dst-ip 0.0.0.0/0";
@@ -221,7 +242,7 @@ function get_vpn_commands(gateway, client_name, password, failover){
 	var cli_vpn;
 	var vpn ='';
 	
-	if(failover === true ){VPN = "VPN-2"}else{var VPN = "VPN-1"}
+	if(failover === true ){VPN = "VPN-Failover"}else{var VPN = "VPN-Primary"}
 	
 	log_debug("starting get_vpn_commands("+gateway+", "+client_name+", "+password+", "+failover+")");
 	cli_vpn = newline;	
@@ -349,13 +370,14 @@ function process_stream_csv(csv_file){
 					bulk_generate_file(locations)
 					.then(function(){
 							log_debug(debug_spacer);
-							log_debug('===then.generate_location_csv(locations)===');
+							log_debug('===then.generate_vpn_location_csv(locations)===');
 							log_debug(debug_spacer);
 							generate_location_csv(locations)
 							.then(function(){
 									log_debug(debug_spacer);							
 									log_debug('===then.generate_vpn_cred_csv(locations)===');
-									log_debug(debug_spacer);							
+									log_debug(debug_spacer);	
+									generate_vpn_location_csv(locations)
 									generate_vpn_cred_csv(locations);
 							});//end then generated
 					}).then(function(){			
@@ -381,9 +403,32 @@ function process_stream_csv(csv_file){
 
 
 /*******************************************************/
-//Generate Location CSV File
+//Generate  Location CSV File
 /*******************************************************/
 function generate_location_csv(locations){
+	return new Promise(function(resolve,reject){
+		log_debug('+Location CSV generation has begun...');
+		//function to generate locations csv
+		var output = '';
+		var location_csv_filename = dateFormat(now, "yyyymmdd")+"-location.csv";
+		var location_csv_filepath = csv_directory + location_csv_filename;
+		
+
+		//+,Location,Test-Location,,CA,United States, America/New York,,,,,,,,,,FQDN,sf-castro@bankofamerica.com		
+		locations.forEach(function (location){
+			output += "+,Location,"+location.name+",,"+location.state+",United States, "+location.timeZone+",,,,,,,,,,FQDN,"+location.client_name+"@"+client_domain+"\n"
+		})
+	
+		write_to_file(output,location_csv_filepath);
+		resolve();
+	});
+}//end generate__location_csv
+
+
+/*******************************************************/
+//Generate VPN Location CSV File
+/*******************************************************/
+function generate_vpn_location_csv(locations){
 	return new Promise(function(resolve,reject){
 		log_debug('+Location CSV generation has begun...');
 		//function to generate locations csv
@@ -399,7 +444,7 @@ function generate_location_csv(locations){
 		write_to_file(output,location_csv_filepath);
 		resolve();
 	});
-}//end generate_location_csv
+}//end generate_vpn_location_csv
 
 
 /*******************************************************/
@@ -477,6 +522,7 @@ log_debug(debug_spacer);
 if(command === 'bulk'){
 	console.log("Starting Bulk process...");
 	console.log(spacer);
+	console.log("FileName: "+csv_filepath);
 	
 	if(isEmpty(csv_filepath)){
 	
@@ -509,8 +555,8 @@ if(command === 'bulk'){
 	console.log("Menu System coming soon...");
 	console.log(spacer);
 	console.log("Please use following format.\n");
-	console.log("For Single VPN: \n node app.js bulk -path csv_input/input_test.csv");
-	console.log("For Redundant VPN : \n node app.js bulk -failover -path csv_input/intput_test.csv");
+	console.log("For Single VPN: \n node app.js bulk -p csv_input/input_test.csv");
+	console.log("For Redundant VPN : \n node app.js bulk -f -p csv_input/intput_test.csv");
 	console.log(spacer);
 	yargs.showHelp();
 	console.log(spacer);
