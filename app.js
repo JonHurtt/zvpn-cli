@@ -134,7 +134,7 @@ function add_location(data){
 		gateway: '',
 		f_gateway: '',
 		state: data[6],
-		timeZone: 'America/Los Angeles'
+		timeZone: data[7]
 	};//defining an empty object
 	
 	log_debug("===add_location(data)===");
