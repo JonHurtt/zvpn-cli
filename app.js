@@ -38,6 +38,12 @@ var argv=yargs.command('bulk', 'Bulk Import of CSV File {loc,phase,hostname,clie
 				alias: 'f',
 				description: 'use to enable failover configuration',
 				type: 'boolean'
+			},phase: {
+				default: 'ALL',
+				demand: false,
+				alias: 'x',
+				description: 'current phase of output will defaul to ALL',
+				type: 'string'				
 			}
 	})//end yarg.options
 		.help('help')
@@ -48,6 +54,7 @@ var argv=yargs.command('bulk', 'Bulk Import of CSV File {loc,phase,hostname,clie
 var command = argv._[0]; //underscore named argument
 var csv_filepath = argv.path;
 var gateawy_failover = argv.failover; 
+var current_phase = argv.phase;
 
 /*******************************************************/
 //Utilty functinons
@@ -155,16 +162,27 @@ function add_location(data){
 function add_locations(data){
 	return new Promise(function (resolve, reject){		
 
+		log_debug(debug_spacer);		
 		log_debug('===add_locations(locations)===');
-	
-		data.forEach(function (location){
-			log_debug(debug_spacer);
-			log_debug('***Adding Location ' + location[0] + '***');
-			log_debug(debug_spacer);
-			
-			add_location(location)
-			
-		})
+		log_debug('===Current '+ current_phase +'===');		
+		log_debug(debug_spacer);		
+		
+		data.forEach(function (location){			
+			if(location[1] == current_phase || current_phase == 'ALL'){
+				log_debug(debug_spacer);
+				log_debug('***Adding Location ' + location[0] + '***');
+				log_debug('***Location Phase ' + location[1] + '***');
+				log_debug(debug_spacer);
+
+				add_location(location)					
+			}else{
+				log_debug(debug_spacer);
+				log_debug('***Bypassing Location ' + location[0] + '***');
+				log_debug('***Location Phase "' + location[1] + '"***');
+				
+				log_debug(debug_spacer);
+			}
+		})//endforeach
 		resolve();	
 	})//end promise
 }//end of locations
@@ -358,6 +376,7 @@ function process_stream_csv(csv_file){
 			log_debug(JSON.stringify(csv_data))
 			log_debug('===add_locations(data)===');
 			add_locations(csv_data)
+			
 			.then(function(){
 				log_debug(debug_spacer);												
 				log_debug('===then.create_directories()===');
@@ -370,16 +389,27 @@ function process_stream_csv(csv_file){
 					bulk_generate_file(locations)
 					.then(function(){
 							log_debug(debug_spacer);
-							log_debug('===then.generate_vpn_location_csv(locations)===');
+							log_debug('===then.generate_location_csv(locations)===');
 							log_debug(debug_spacer);
 							generate_location_csv(locations)
 							.then(function(){
 									log_debug(debug_spacer);							
 									log_debug('===then.generate_vpn_cred_csv(locations)===');
 									log_debug(debug_spacer);	
-									generate_vpn_location_csv(locations)
-									generate_vpn_cred_csv(locations);
-							});//end then generated
+									generate_vpn_cred_csv(locations)
+									.then(function(){
+										log_debug(debug_spacer);							
+										log_debug('===then.generate_remove_vpn_location_csv(locations)===');
+										log_debug(debug_spacer);	
+										generate_remove_vpn_location_csv(locations)
+										.then(function(){
+											log_debug(debug_spacer);							
+											log_debug('===then.generate_remove_vpn_location_csv(locations)===');
+											log_debug(debug_spacer);	
+											generate_remove_vpn_cred_csv(locations)
+										});										
+										})//end generate_vpn_cred_csv.then
+									})//end generate_location_csv.then
 					}).then(function(){			
 					generate_debug();
 					})//end then generate_debug
@@ -410,7 +440,7 @@ function generate_location_csv(locations){
 		log_debug('+Location CSV generation has begun...');
 		//function to generate locations csv
 		var output = '';
-		var location_csv_filename = dateFormat(now, "yyyymmdd")+"-location.csv";
+		var location_csv_filename = dateFormat(now, "yyyymmdd")+"-add-location.csv";
 		var location_csv_filepath = csv_directory + location_csv_filename;
 		
 
@@ -426,25 +456,26 @@ function generate_location_csv(locations){
 
 
 /*******************************************************/
-//Generate VPN Location CSV File
+//Generate VPN Location CSV File for Removal
 /*******************************************************/
-function generate_vpn_location_csv(locations){
+function generate_remove_vpn_location_csv(locations){
 	return new Promise(function(resolve,reject){
-		log_debug('+Location CSV generation has begun...');
+		log_debug('+Removing Location CSV generation has begun...');
 		//function to generate locations csv
 		var output = '';
-		var location_csv_filename = dateFormat(now, "yyyymmdd")+"-vpn-location.csv";
+		var location_csv_filename = dateFormat(now, "yyyymmdd")+"-minus-location.csv";
 		var location_csv_filepath = csv_directory + location_csv_filename;
 		
-		//+,VPN,{Location},FQDN,{client_name}@domain.com
+
+		//+,Location,Test-Location,,CA,United States, America/New York,,,,,,,,,,FQDN,sf-castro@bankofamerica.com		
 		locations.forEach(function (location){
-			output += "+,VPN,"+location.name+",FQDN,"+location.client_name+"@"+client_domain+"\n";
+			output += "-,Location,"+location.name+"\n"
 		})
 	
 		write_to_file(output,location_csv_filepath);
 		resolve();
 	});
-}//end generate_vpn_location_csv
+}//end generate_remove_vpn_location_csv
 
 
 /*******************************************************/
@@ -461,12 +492,12 @@ function generate_vpn_cred_csv(locations){
 		
 		//function to generate locations csv
 		var output = 'Action,PSK Type,VPN User Name,Comments,Pre-Shared Key,THIS IS A HEADER LINE WHICH WILL NOT BE IMPORTED - YOUR DATA MUST START FROM LINE 2\n';
-		var vpn_csv_filename = dateFormat(now, "yyyymmdd")+"-vpn-credentials.csv";
+		var vpn_csv_filename = dateFormat(now, "yyyymmdd")+"-add-vpn-credentials.csv";
 		var location_csv_filepath = csv_directory + vpn_csv_filename;
 		
 		//+,VPN,{Location},FQDN,{client_name}@domain.com
 		locations.forEach(function (location){
-			output += "+,UFQDN,"+location.client_name+"@"+client_domain+",Location:"+location.client_name+"["+location.password+"],"+location.password+",\n";
+			output += "+,UFQDN,"+location.client_name+"@"+client_domain+","+location.phase+":"+location.client_name+"["+location.password+"],"+location.password+",\n";
 		})
 		
 		write_to_file(output,location_csv_filepath);
@@ -475,6 +506,36 @@ function generate_vpn_cred_csv(locations){
 		resolve();
 	});
 }//end generate_vpn_cred_csv
+
+/*******************************************************/
+//Generate Removeal VPN Credentials CSV File
+/*******************************************************/
+function generate_remove_vpn_cred_csv(locations){
+	return new Promise(function(resolve,reject){
+
+		log_debug('+Removal Location VPN Credentials generation has begun...');
+		/*
+		Action,PSK Type,VPN User Name,Comments,Pre-Shared Key,THIS IS A HEADER LINE WHICH WILL NOT BE IMPORTED - YOUR DATA MUST START FROM LINE 2
+		+,UFQDN,{client_name}@domain.com,Location:{Location}[{Password}],{Password},
+		*/
+		
+		//function to generate locations csv
+		var output = 'Action,PSK Type,VPN User Name,Comments,Pre-Shared Key,THIS IS A HEADER LINE WHICH WILL NOT BE IMPORTED - YOUR DATA MUST START FROM LINE 2\n';
+		var vpn_csv_filename = dateFormat(now, "yyyymmdd")+"-minus-vpn-credentials.csv";
+		var location_csv_filepath = csv_directory + vpn_csv_filename;
+		
+		//+,VPN,{Location},FQDN,{client_name}@domain.com
+		locations.forEach(function (location){
+			output += "-,UFQDN,"+location.client_name+"@"+client_domain+",P:"+location.phase+"Loc:"+location.client_name+"["+location.password+"],"+location.password+",\n";
+		})
+		
+		write_to_file(output,location_csv_filepath);
+		log_debug(debug_spacer);							
+
+		resolve();
+	});
+}//end generate_vpn_cred_csv
+
 
 /*******************************************************/
 //Generate Summary 
@@ -532,12 +593,15 @@ if(command === 'bulk'){
 	}else{
 		if(gateawy_failover){
 			console.log("Gateway Failover is Activated.");
-			console.log(spacer);
+
 				
 		}else{
 			console.log("Gateway Failover is Deactivated.");
-			console.log(spacer);	
+
 		};
+		
+		console.log("Processing locations for "+ current_phase);
+		console.log(spacer);	
 	
 		process_stream_csv(csv_filepath);
 		
