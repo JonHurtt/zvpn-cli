@@ -478,7 +478,7 @@ function generate_location_csv(locations){
 		log_debug('+Location CSV generation has begun...');
 		//function to generate locations csv
 		var output = '';
-		var location_csv_filename = dateFormat(now, "yyyymmdd")+"-add-location.csv";
+		var location_csv_filename = dateFormat(now, "yyyymmdd")+"-02-add-location.csv";
 		var location_csv_filepath = csv_directory + location_csv_filename;
 
 		//+,Location,Test-Location,,CA,United States, America/New York,,,,,,,,,,FQDN,sf-castro@bankofamerica.com		
@@ -536,7 +536,7 @@ function generate_vpn_cred_csv(locations){
 		
 		//function to generate locations csv
 		var output = 'Action,PSK Type,VPN User Name,Comments,Pre-Shared Key,THIS IS A HEADER LINE WHICH WILL NOT BE IMPORTED - YOUR DATA MUST START FROM LINE 2\n';
-		var vpn_csv_filename = dateFormat(now, "yyyymmdd")+"-add-vpn-credentials.csv";
+		var vpn_csv_filename = dateFormat(now, "yyyymmdd")+"-01-add-vpn-credentials.csv";
 		var location_csv_filepath = csv_directory + vpn_csv_filename;
 		
 		//+,VPN,{Location},FQDN,{client_name}@domain.com
